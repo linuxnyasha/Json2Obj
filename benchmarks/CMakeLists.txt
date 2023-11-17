@@ -1,0 +1,6 @@
+project("Json2Obj-benchmarks")
+find_package(Json2Obj CONFIG REQUIRED)
+find_package(benchmark CONFIG REQUIRED)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+add_executable(benchmarks benchmark.cpp)
+target_link_libraries(benchmarks Json2Obj::Json2Obj benchmark::benchmark)
