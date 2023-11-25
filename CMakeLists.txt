@@ -6,6 +6,7 @@ project(
     DESCRIPTION
     "A header-only c++ library that provides json serialization on reflection"
     HOMEPAGE_URL  "http://ivt5wiimhwpo56td6eodn2n3fduug3bglqvqewbk2jnyl4hcimea.b32.i2p/git/sha512sum/Json2Obj")
+cmake_policy(SET CMP0079 NEW)
 
 include(GNUInstallDirs)
 
@@ -21,12 +22,7 @@ target_include_directories(
 target_compile_features(Json2Obj INTERFACE cxx_std_20)
 
 #enable_testing()
-if(BUILD_BENCHMARKS)
-  add_subdirectory(benchmarks)
-endif()
-if(BUILD_TESTS)
-  add_subdirectory(tests)
-endif()
+
 
 install(TARGETS Json2Obj
   EXPORT Json2ObjTargets
@@ -56,5 +52,14 @@ install(FILES "${PROJECT_BINARY_DIR}/Json2ObjConfig.cmake"
         DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/Json2Obj/cmake)
 
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/json2obj DESTINATION include)
+
+if(BUILD_BENCHMARKS)
+  add_subdirectory(benchmarks)
+  target_link_libraries(benchmarks Json2Obj)
+endif()
+if(BUILD_TESTS)
+  add_subdirectory(tests)
+  target_link_libraries(tests Json2Obj)
+endif()
 
 

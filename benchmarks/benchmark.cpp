@@ -14,7 +14,7 @@ constexpr auto createArray() {
 static void BMSerializeReflectionSizeT(benchmark::State& state) {
   constexpr std::size_t data = 8;
   for(auto _ : state) {
-    auto json = Json2Obj::JsonSerializator::serialize<nlohmann::json>(std::move(data));
+    auto json = Json2Obj::JsonSerializator::serialize<nlohmann::json>(data);
   };
 };
 struct IndexStructure {
@@ -23,14 +23,14 @@ struct IndexStructure {
 static void BMSerializeReflectionSimpleType(benchmark::State& state) {
   constexpr auto data = IndexStructure{8};
   for(auto _ : state) {
-    auto json = Json2Obj::JsonSerializator::serialize<nlohmann::json>(std::move(data));
+    auto json = Json2Obj::JsonSerializator::serialize<nlohmann::json>(data);
   };
 };
 
 static void BMSerializeReflectionSimpleTypeArray10(benchmark::State& state) {
   constexpr auto data = createArray<10, IndexStructure>();
   for(auto _ : state) {
-    auto json = Json2Obj::JsonSerializator::serialize<nlohmann::json>(std::move(data));
+    auto json = Json2Obj::JsonSerializator::serialize<nlohmann::json>(data);
   };
 };
 static void BMSerializeReflectionSimpleTypeVector10(benchmark::State& state) {
@@ -40,7 +40,7 @@ static void BMSerializeReflectionSimpleTypeVector10(benchmark::State& state) {
     data.push_back(element);
   };
   for(auto _ : state) {
-    auto json = Json2Obj::JsonSerializator::serialize<nlohmann::json>(std::move(data));
+    auto json = Json2Obj::JsonSerializator::serialize<nlohmann::json>(data);
   };
 };
 
@@ -53,30 +53,30 @@ struct City {
 };
 
 static void BMSerializeReflectionComplexType(benchmark::State& state) {
-  City city = {{{1}}};
+  const City city = {{{1}}};
   for(auto _ : state) {
-    auto json = Json2Obj::JsonSerializator::serialize<nlohmann::json>(std::move(city));
+    auto json = Json2Obj::JsonSerializator::serialize<nlohmann::json>(city);
   };
 };
 static void BMSerializeReflectionComplexTypeArray10(benchmark::State& state) {
-  City city = {{{1}}};
-  auto cityArray = std::array<City, 10>{city, city, city, city, city, city, city, city, city, city};
+  const City city = {{{1}}};
+  const auto cityArray = std::array<City, 10>{city, city, city, city, city, city, city, city, city, city};
   for(auto _ : state) {
-    auto json = Json2Obj::JsonSerializator::serialize<nlohmann::json>(std::move(cityArray));
+    auto json = Json2Obj::JsonSerializator::serialize<nlohmann::json>(cityArray);
   };
 };
 static void BMSerializeReflectionComplexTypeVector10(benchmark::State& state) {
-  City city = {{{1}}};
-  auto cityArray = std::vector<City>{city, city, city, city, city, city, city, city, city, city};
+  const City city = {{{1}}};
+  const auto cityArray = std::vector<City>{city, city, city, city, city, city, city, city, city, city};
   for(auto _ : state) {
-    auto json = Json2Obj::JsonSerializator::serialize<nlohmann::json>(std::move(cityArray));
+    auto json = Json2Obj::JsonSerializator::serialize<nlohmann::json>(cityArray);
   };
 };
 
 static void BMSerializeReflectionComplexType10(benchmark::State& state) {
-  City city = {{{1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}}};
+  const City city = {{{1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}}};
   for(auto _ : state) {
-    auto json = Json2Obj::JsonSerializator::serialize<nlohmann::json>(std::move(city));
+    auto json = Json2Obj::JsonSerializator::serialize<nlohmann::json>(city);
   };
 };
 
