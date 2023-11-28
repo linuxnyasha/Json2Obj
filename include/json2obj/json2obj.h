@@ -183,37 +183,14 @@ namespace Json2Obj {
     return T{std::get<I>(tuple)...};
   };
 
-  template <typename T, typename... Args>
-  constexpr auto constructTypeFromTuple(std::tuple<Args...>&& tuple) {
+  template <typename T, typename Tuple>
+  constexpr auto constructTypeFromTuple(Tuple&& tuple) {
     return constructTypeFromTuple<T>(
-       std::move(tuple)
-      ,std::make_index_sequence<sizeof...(Args)>()
+       std::forward<Tuple>(tuple)
+      ,std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<Tuple>>>()
     );
   };
 
-  template <typename Result, typename T, std::size_t Size, std::size_t... I>
-  constexpr auto constructTypeFromArray(std::array<T, Size>&& array, std::index_sequence<I...>) {
-    return Result{std::get<I>(array)...};
-  };
-
-  template <typename Result, typename T, std::size_t Size>
-  constexpr auto constructTypeFromArray(std::array<T, Size>&& array) {
-    return constructTypeFromTuple<Result>(
-       std::move(array)
-      ,std::make_index_sequence<Size>()
-    );
-  };
-
-
-  template <typename Array, std::size_t... I>
-  static constexpr auto arrayToTuple(Array&& array, std::index_sequence<I...>) {
-    return std::tie(std::get<I>(array)...);
-  };
-
-  template <std::size_t Size, typename Array>
-  static constexpr auto arrayToTuple(Array&& array) {
-    return arrayToTuple(std::move(array),  std::make_index_sequence<Size>());
-  };
 
   template <typename T>
   struct isArray {
@@ -278,11 +255,11 @@ namespace Json2Obj {
 
 
 
-      template <typename T, typename Names, typename Json, std::size_t... I>
-      constexpr auto constructTupleFromJson(Names&& names, Json&& json, std::index_sequence<I...>) {
+      template <typename T, typename Json, std::size_t... I>
+      constexpr auto constructTupleFromJson(Json&& json, std::index_sequence<I...>) {
         return std::make_tuple(
           Deserialize<Json, decltype(boost::pfr::get<I>(std::declval<T>()))>()(
-            std::move(json[std::get<I>(names)])
+            std::move(json[getName<I, T>()])
           )...
         );
       };
@@ -296,27 +273,12 @@ namespace Json2Obj {
         });
       };
 
-      template <typename Json, typename ElementType>
-      constexpr Json constructJsonFromVector(std::vector<ElementType>&& vector) {
-        return map(std::move(vector), [](auto obj){
-          return Serialize<ElementType&&, Json>()(std::move(obj));
-        });
-      };
 
-      template <typename Json, typename ElementType>
-      constexpr Json constructJsonFromVector(const std::vector<ElementType>& vector) {
-        return map(vector, [](const ElementType& obj){
-          return Serialize<const ElementType&, Json>()(obj);
-        });
-      };
-
-
-      template <typename T, typename Names, typename Json>
-      constexpr auto constructTupleFromJson(Json&& json, Names&& names) {
+      template <typename T, typename Json>
+      constexpr auto constructTupleFromJson(Json&& json) {
         return constructTupleFromJson<T>(
-           std::move(names)
-          ,std::forward<Json>(json)
-          ,std::make_index_sequence<std::tuple_size_v<Names>>()
+           std::forward<Json>(json)
+          ,std::make_index_sequence<boost::pfr::tuple_size_v<T>>()
         );
       };
 
@@ -334,13 +296,23 @@ namespace Json2Obj {
       };
 
 
-      template <typename Json, typename Array>
-      constexpr Json constructJsonFromArray(Array&& array) {
-        using ElementType = std::remove_pointer_t<decltype(std::begin(std::declval<Array>()))>;
-        return constructTypeFromArray<Json>(map(std::forward<Array>(array)
-            ,[](ElementType obj){
-          return Serialize<ElementType, Json>()(std::move(obj));
-        }));
+      template <typename Json, typename Iterable>
+      constexpr auto constructJsonFromIterableImpl(Iterable&& iterable) {
+        return map(std::forward<Iterable>(iterable)
+            ,[]<typename ElementType>(ElementType&& obj){
+          return Serialize<ElementType, Json>()(std::forward<ElementType>(obj));
+        });
+      };
+
+      template <typename Json, typename Iterable>
+      constexpr auto constructJsonFromIterable(Iterable&& iterable) {
+        return constructJsonFromIterableImpl<Json>(std::forward<Iterable>(iterable));
+      };
+
+
+      template <typename Json, typename Iterable, std::enable_if_t<!CanBeJson<Json, decltype(constructJsonFromIterableImpl<Json>(std::declval<Iterable>()))>::value, std::nullptr_t> = nullptr>
+      constexpr auto constructJsonFromIterable(Iterable&& iterable) {
+        return constructTypeFromTuple<Json>(constructJsonFromIterableImpl<Json>(std::forward<Iterable>(iterable)));
       };
 
 
@@ -358,10 +330,8 @@ namespace Json2Obj {
             } else {
               if constexpr(CanBeJson<Json, T>::value) {
                 return obj;
-              } else if constexpr(isArray<T>::value) {
-                return constructJsonFromArray<Json>(std::forward<T>(obj));
-              } else if constexpr(isVectorV<T>) {
-                return constructJsonFromVector<Json>(std::forward<T>(obj));
+              } else if constexpr(isArray<T>::value || isVectorV<T>) {
+                return constructJsonFromIterable<Json>(std::forward<T>(obj));
               } else {
                 return constructJsonFromObj<Json>(std::forward<T>(obj));
               };
@@ -382,12 +352,11 @@ namespace Json2Obj {
             if constexpr(CanBeJson<Json, T>::value) {
               return std::move(json.template get<T>());
             } else if constexpr(isArray<T>::value) {
-              using ElementType = std::remove_pointer_t<decltype(std::declval<T>().begin())>;
               return constructTypeFromTuple<T>(
-                  map(boost::pfr::structure_to_tuple(
+                  map(toTuple(
                     json.template get<std::array<Json, std::tuple_size_v<T>>>()
                   ),
-                    [](auto obj){
+                    []<typename ElementType>(ElementType obj){
                 return Deserialize<Json, ElementType>()(std::move(obj));
               }));
             } else if constexpr(isVectorV<T>) {
@@ -397,7 +366,6 @@ namespace Json2Obj {
               return constructTypeFromTuple<T>(
                 constructTupleFromJson<T>(
                    std::move(json)
-                  ,boost::pfr::names_as_array<T>()
                 )
               );
             };
