@@ -30,6 +30,7 @@ struct City {
     return people == other.people;
   };
 };
+
 TEST_CASE("Complex object are serialized", "[serialize_reflection_complex]") {
   City city;
   city.people.push_back(Human{"User", {}});
@@ -45,6 +46,21 @@ TEST_CASE("Complex object are serialized Without optional vector", "[serialize_r
   nlohmann::json jsonManual = R"({"people":[{"name":"User","phones":null}]})"_json;
   REQUIRE(json == jsonManual);
 };
+
+TEST_CASE("Static Size Array Serialized", "[serialize_array]") {
+  constexpr std::array<int, 3> array = {1, 2, 3};
+  auto json = Json2Obj::JsonSerializator::serialize<nlohmann::json>(std::move(array));
+  nlohmann::json jsonManual = R"([1,2,3])"_json;
+  REQUIRE(json == jsonManual);
+};
+
+TEST_CASE("Static Size Array deerialized", "[deserialize_array]") {
+  constexpr std::array<int, 3> array = {1, 2, 3};
+  nlohmann::json json = R"([1,2,3])"_json;
+  auto arrayFromJson = Json2Obj::JsonSerializator::deserialize<std::array<int, 3>>(std::move(json));
+  REQUIRE(array == arrayFromJson);
+};
+
 TEST_CASE("Complex object are deserialized", "[deserialize_reflection_complex]") {
   City city;
   city.people.push_back(Human{"User", {}});
@@ -60,3 +76,4 @@ TEST_CASE("Complex object are deserialized Without optional vector", "[deseriali
   auto cityFromJson = Json2Obj::JsonSerializator::deserialize<City>(std::move(json));
   REQUIRE(city == cityFromJson);
 };
+
